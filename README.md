@@ -26,11 +26,6 @@ Strategic Visualization: Providing leadership with a transparent view of interna
 
 Installation and Usage
 
-Clone the Repository:
-
-git clone [https://github.com/your-username/enron-network-intelligence.git](https://github.com/your-username/enron-network-intelligence.git)
-
-
 Acquire the Dataset:
 Download the emails.csv file from the Kaggle Enron Dataset repository.
 
