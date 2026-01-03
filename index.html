@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enron Forensic Intelligence | User-Friendly Tech Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #010409; overflow: hidden; font-family: 'Courier New', monospace; }
+        #3d-graph { width: 100vw; height: 100vh; }
+        .glass {
+            background: rgba(6, 18, 12, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+        .node-label {
+            color: #4ade80;
+            padding: 8px 14px;
+            border-radius: 4px;
+            background: rgba(2, 10, 6, 0.95);
+            font-size: 13px;
+            border: 1px solid #10b981;
+            pointer-events: none;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+            text-transform: uppercase;
+        }
+        input[type="range"] {
+            accent-color: #10b981;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #064e3b;
+            border-radius: 10px;
+        }
+        .tech-text {
+            text-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+        }
+        .btn-active {
+            background: rgba(16, 185, 129, 0.2) !important;
+            border-color: #4ade80 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Control Panel -->
+    <div class="fixed top-0 left-0 w-full p-4 md:p-6 z-50 flex flex-col md:flex-row justify-between items-start pointer-events-none">
+        <div class="glass p-6 rounded-lg pointer-events-auto w-full md:w-80 mb-4 md:mb-0">
+            <h1 class="text-xl font-bold text-emerald-400 mb-1 flex items-center gap-2 tech-text">
+                <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></span>
+                ENRON_OS // ANALYST
+            </h1>
+            <p class="text-emerald-700 text-[10px] mb-4 uppercase tracking-[0.2em] font-bold">Network Exploration Interface</p>
+
+            <!-- Step-by-Step Guide for New Users -->
+            <div id="quickStart" class="mb-4 p-3 bg-emerald-950/20 border border-emerald-900/50 rounded text-[10px] text-emerald-500/80 leading-relaxed">
+                <span class="font-bold text-emerald-400 uppercase">Quick Start:</span><br>
+                1. Click "LOAD DATA" to import your CSV.<br>
+                2. Drag the graph to rotate; scroll to zoom.<br>
+                3. Click nodes to see communication details.
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mb-6 relative">
+                <label class="text-[9px] text-emerald-800 uppercase font-bold mb-1 block">Find Employee</label>
+                <input type="text" id="nodeSearch" placeholder="Type email address..."
+                       class="w-full bg-black/50 border border-emerald-900/50 rounded px-4 py-2 text-xs text-emerald-400 placeholder:text-emerald-900 focus:outline-none focus:border-emerald-500 transition-all font-mono">
+                <div id="searchResults" class="absolute top-full left-0 w-full mt-1 glass rounded-lg overflow-hidden hidden max-h-40 overflow-y-auto z-50"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="border-b border-emerald-900/30 pb-2">
+                    <span class="text-emerald-700 text-[9px] uppercase font-bold">People</span>
+                    <span class="text-emerald-400 font-mono font-bold block text-lg" id="nodeCount">0</span>
+                </div>
+                <div class="border-b border-emerald-900/30 pb-2">
+                    <span class="text-emerald-700 text-[9px] uppercase font-bold">Links</span>
+                    <span class="text-emerald-400 font-mono font-bold block text-lg" id="linkCount">0</span>
+                </div>
+            </div>
+
+            <input type="file" id="csvUpload" accept=".csv" class="hidden">
+            <button onclick="document.getElementById('csvUpload').click()"
+                    class="w-full py-3 bg-emerald-600/20 hover:bg-emerald-500/40 text-emerald-400 text-xs font-bold rounded transition-all border border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)] uppercase tracking-widest">
+                Load Data File
+            </button>
+        </div>
+
+        <!-- Right Side View Controls -->
+        <div class="flex flex-col gap-4 pointer-events-none w-full md:w-auto">
+            <div class="glass p-4 rounded-lg pointer-events-auto flex flex-col gap-2 w-full md:w-56">
+                <p class="text-[10px] text-emerald-900 uppercase font-bold mb-1 flex justify-between">
+                    View Options
+                    <span title="Bridges are key connectors between groups." class="cursor-help opacity-50">ⓘ</span>
+                </p>
+                <button id="bridgeBtn" onclick="toggleHighlight()" class="w-full py-2 bg-black/40 hover:bg-emerald-950/40 text-emerald-500 text-[10px] font-bold rounded transition border border-emerald-900/50 uppercase">Find Influencers</button>
+                <button id="flowBtn" onclick="toggleParticles()" class="w-full py-2 bg-black/40 hover:bg-emerald-950/40 text-emerald-500 text-[10px] font-bold rounded transition border border-emerald-900/50 uppercase">Show Traffic Flow</button>
+                <button onclick="resetView()" class="w-full py-2 bg-black/40 hover:bg-emerald-950/40 text-emerald-500 text-[10px] font-bold rounded transition border border-emerald-900/50 uppercase">Reset View</button>
+            </div>
+
+            <div class="glass p-4 rounded-lg pointer-events-auto w-full md:w-56 border-l-4 border-l-emerald-500">
+                <p class="text-[10px] text-emerald-900 uppercase font-bold mb-2">Sphere Size</p>
+                <input type="range" min="1" max="15" value="5" class="w-full h-1 bg-emerald-950 rounded-lg cursor-pointer" oninput="updateNodeSize(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Slider -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] md:w-[600px] glass p-4 rounded-lg z-50 border-t-2 border-t-emerald-500/30">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] text-emerald-700 font-bold uppercase tracking-widest">Network Discovery Timeline</span>
+            <span id="timelineVal" class="text-emerald-400 font-mono text-[10px] font-bold tracking-tighter">100% VISIBLE</span>
+        </div>
+        <input type="range" id="timeline" min="1" max="100" value="100" class="w-full h-1 bg-emerald-950 rounded-lg cursor-pointer" oninput="filterTimeline(this.value)">
+    </div>
+
+    <!-- Info Panel -->
+    <div id="infoBox" class="fixed bottom-6 right-6 w-80 glass p-6 rounded-lg transform translate-y-[200%] transition-all duration-500 z-50 border-r-4 border-r-emerald-500">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 id="targetName" class="text-emerald-400 font-bold text-lg leading-tight break-all tracking-tight tech-text font-mono">NODE_PROFILE</h3>
+                <p class="text-emerald-700 text-[10px] uppercase font-bold tracking-widest mt-1">Status: Analyzed</p>
+            </div>
+            <button onclick="document.getElementById('infoBox').style.transform = 'translateY(200%)'" class="text-emerald-900 hover:text-emerald-400 transition text-xl">×</button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-black/60 p-3 rounded border border-emerald-900/30">
+                    <p class="text-[9px] text-emerald-800 uppercase font-bold">Total Links</p>
+                    <p id="interactions" class="text-emerald-400 font-mono text-xl font-bold">0</p>
+                </div>
+                <div class="bg-black/60 p-3 rounded border border-emerald-900/30">
+                    <p class="text-[9px] text-emerald-800 uppercase font-bold">Category</p>
+                    <p id="influence" class="text-emerald-400 font-mono text-[11px] font-bold mt-2 uppercase">---</p>
+                </div>
+            </div>
+            <div class="p-3 rounded bg-emerald-950/20 border border-emerald-900/50">
+                <p class="text-[11px] text-emerald-500 leading-relaxed font-mono" id="forensicNote">
+                    [SYSTEM]: Trace initiate...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="3d-graph"></div>
+
+    <script>
+        let fullData = { nodes: [], links: [] };
+        let highlightActive = false;
+        let particlesActive = false;
+        let currentNodeSize = 5;
+
+        const Graph = ForceGraph3D()
+            (document.getElementById('3d-graph'))
+            .nodeLabel(node => `<div class="node-label">${node.id}</div>`)
+            .nodeColor(node => node.isBridge ? '#4ade80' : '#064e3b')
+            .nodeOpacity(0.9)
+            .nodeRelSize(currentNodeSize)
+            .linkWidth(0.6)
+            .linkColor(() => '#10b98110')
+            .backgroundColor('#010409')
+            .showNavInfo(false)
+            .onNodeClick(node => focusOnNode(node));
+
+        function focusOnNode(node) {
+            const distance = 140;
+            const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+            Graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1500);
+
+            const infoBox = document.getElementById('infoBox');
+            document.getElementById('targetName').innerText = node.id.split('@')[0].toUpperCase();
+            document.getElementById('interactions').innerText = node.val;
+            document.getElementById('influence').innerText = node.isBridge ? "KEY CONNECTOR" : "TEAM MEMBER";
+            document.getElementById('forensicNote').innerText = `This entity has ${node.val} connections. ${node.isBridge ? 'They act as a bridge between multiple communication clusters.' : 'They are localized within a specific cluster.'}`;
+            infoBox.style.transform = 'translateY(0)';
+        }
+
+        const searchInput = document.getElementById('nodeSearch');
+        const searchResults = document.getElementById('searchResults');
+
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            if (!val) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            const matches = fullData.nodes.filter(n => n.id.toLowerCase().includes(val)).slice(0, 10);
+            if (matches.length > 0) {
+                searchResults.innerHTML = matches.map(m => `
+                    <div class="px-4 py-2 hover:bg-emerald-900/40 cursor-pointer text-xs text-emerald-500 border-b border-emerald-900/20 last:border-0 font-mono"
+                         onclick="selectFromSearch('${m.id}')">
+                        SELECT >> ${m.id}
+                    </div>
+                `).join('');
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        function selectFromSearch(id) {
+            const node = fullData.nodes.find(n => n.id === id);
+            if (node) {
+                focusOnNode(node);
+                searchInput.value = id;
+                searchResults.classList.add('hidden');
+            }
+        }
+
+        function filterTimeline(percent) {
+            const index = Math.floor((percent / 100) * fullData.links.length);
+            const filteredLinks = fullData.links.slice(0, index);
+            const activeNodeIds = new Set();
+            filteredLinks.forEach(l => {
+                activeNodeIds.add(typeof l.source === 'object' ? l.source.id : l.source);
+                activeNodeIds.add(typeof l.target === 'object' ? l.target.id : l.target);
+            });
+            const filteredNodes = fullData.nodes.filter(n => activeNodeIds.has(n.id));
+            Graph.graphData({ nodes: filteredNodes, links: filteredLinks });
+            document.getElementById('timelineVal').innerText = percent + "% VISIBLE";
+            document.getElementById('nodeCount').innerText = filteredNodes.length;
+            document.getElementById('linkCount').innerText = filteredLinks.length;
+        }
+
+        function updateNodeSize(val) {
+            currentNodeSize = val;
+            Graph.nodeRelSize(val);
+        }
+
+        function toggleParticles() {
+            particlesActive = !particlesActive;
+            document.getElementById('flowBtn').classList.toggle('btn-active', particlesActive);
+            Graph.linkDirectionalParticles(particlesActive ? 3 : 0);
+            Graph.linkDirectionalParticleSpeed(0.008);
+            Graph.linkDirectionalParticleWidth(1.2);
+            Graph.linkDirectionalParticleColor(() => '#4ade80');
+        }
+
+        document.getElementById('csvUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const lines = event.target.result.split('\n');
+                const nodesMap = new Map();
+                const links = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const row = lines[i].split(',');
+                    if (row.length < 2) continue;
+                    const src = row[0].trim();
+                    const tgt = row[1].trim();
+                    if (!src || !tgt) continue;
+                    if (!nodesMap.has(src)) nodesMap.set(src, { id: src, val: 0, isBridge: false });
+                    if (!nodesMap.has(tgt)) nodesMap.set(tgt, { id: tgt, val: 0, isBridge: false });
+                    nodesMap.get(src).val += 1;
+                    nodesMap.get(tgt).val += 1;
+                    links.push({ source: src, target: tgt });
+                }
+                const nodes = Array.from(nodesMap.values());
+                const avgConns = (links.length * 2) / nodes.length;
+                nodes.forEach(n => { if (n.val > avgConns * 2.5) n.isBridge = true; });
+                fullData = { nodes, links };
+                Graph.graphData(fullData);
+                document.getElementById('nodeCount').innerText = nodes.length;
+                document.getElementById('linkCount').innerText = links.length;
+                document.getElementById('quickStart').classList.add('hidden');
+                Graph.zoomToFit(1000);
+            };
+            reader.readAsText(file);
+        });
+
+        function toggleHighlight() {
+            highlightActive = !highlightActive;
+            document.getElementById('bridgeBtn').classList.toggle('btn-active', highlightActive);
+            Graph.nodeColor(node => {
+                if (!highlightActive) return node.isBridge ? '#4ade80' : '#064e3b';
+                return node.isBridge ? '#4ade80' : '#022c22';
+            });
+            Graph.linkColor(link => {
+                if (!highlightActive) return '#10b98110';
+                return (link.source.isBridge || link.target.isBridge) ? '#4ade8040' : '#064e3b05';
+            });
+        }
+
+        function resetView() { Graph.zoomToFit(1000); }
+        window.addEventListener('resize', () => Graph.width(window.innerWidth).height(window.innerHeight));
+        document.getElementById('3d-graph').addEventListener('click', (e) => {
+            if (e.target.tagName === 'CANVAS') {
+                document.getElementById('infoBox').style.transform = 'translateY(200%)';
+                searchResults.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
